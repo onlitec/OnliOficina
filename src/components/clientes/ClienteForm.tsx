@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent } from '@/components/ui/card';
-import { User, Save, X, Upload, Image as ImageIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { User, Save, X, Upload, Image as ImageIcon, Car, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -20,6 +21,19 @@ interface Cliente {
   cidade?: string;
   estado?: string;
   cep?: string;
+  observacoes?: string;
+}
+
+interface Veiculo {
+  id?: string;
+  marca: string;
+  modelo: string;
+  ano?: number;
+  cor?: string;
+  placa?: string;
+  chassi?: string;
+  combustivel?: string;
+  km_atual?: number;
   observacoes?: string;
 }
 
@@ -47,6 +61,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
     cep: cliente?.cep || '',
     observacoes: cliente?.observacoes || ''
   });
+  const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
@@ -86,6 +101,30 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
       console.error('Erro ao fazer upload da foto:', error);
       throw error;
     }
+  };
+
+  const addVeiculo = () => {
+    setVeiculos([...veiculos, {
+      marca: '',
+      modelo: '',
+      ano: new Date().getFullYear(),
+      cor: '',
+      placa: '',
+      chassi: '',
+      combustivel: '',
+      km_atual: 0,
+      observacoes: ''
+    }]);
+  };
+
+  const removeVeiculo = (index: number) => {
+    setVeiculos(veiculos.filter((_, i) => i !== index));
+  };
+
+  const updateVeiculo = (index: number, field: keyof Veiculo, value: string | number) => {
+    const updated = [...veiculos];
+    updated[index] = { ...updated[index], [field]: value };
+    setVeiculos(updated);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -130,9 +169,28 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
         if (error) throw error;
         savedCliente = data;
 
+        // Criar veículos associados ao cliente
+        if (veiculos.length > 0) {
+          const veiculosData = veiculos
+            .filter(v => v.marca && v.modelo) // Só criar veículos com marca e modelo
+            .map(veiculo => ({
+              ...veiculo,
+              cliente_id: savedCliente.id,
+              user_id: user.id
+            }));
+
+          if (veiculosData.length > 0) {
+            const { error: veiculosError } = await supabase
+              .from('veiculos')
+              .insert(veiculosData);
+
+            if (veiculosError) throw veiculosError;
+          }
+        }
+
         toast({
           title: "Cliente criado!",
-          description: `${formData.nome} foi cadastrado com código ${savedCliente.codigo}.`,
+          description: `${formData.nome} foi cadastrado com código ${savedCliente.codigo}.${veiculos.length > 0 ? ` ${veiculos.filter(v => v.marca && v.modelo).length} veículo(s) adicionado(s).` : ''}`,
         });
       }
 
@@ -156,6 +214,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
         cep: '',
         observacoes: ''
       });
+      setVeiculos([]);
       setPhotoFile(null);
       setPhotoPreview(null);
 
@@ -338,6 +397,146 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
               </div>
             </div>
           </div>
+
+          {/* Seção de Veículos - apenas para novos clientes */}
+          {!cliente && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Car className="w-5 h-5 text-primary" />
+                    <h3 className="text-lg font-semibold">Veículos do Cliente</h3>
+                  </div>
+                  <Button type="button" onClick={addVeiculo} size="sm">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Adicionar Veículo
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {veiculos.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-8">
+                    Nenhum veículo adicionado. Clique em "Adicionar Veículo" para começar.
+                  </p>
+                ) : (
+                  veiculos.map((veiculo, index) => (
+                    <Card key={index} className="relative">
+                      <CardContent className="p-4">
+                        <div className="absolute top-2 right-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => removeVeiculo(index)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                          <div className="space-y-2">
+                            <Label>Marca *</Label>
+                            <Input
+                              placeholder="Ex: Toyota"
+                              value={veiculo.marca}
+                              onChange={(e) => updateVeiculo(index, 'marca', e.target.value)}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Modelo *</Label>
+                            <Input
+                              placeholder="Ex: Corolla"
+                              value={veiculo.modelo}
+                              onChange={(e) => updateVeiculo(index, 'modelo', e.target.value)}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Ano</Label>
+                            <Input
+                              type="number"
+                              placeholder="2024"
+                              value={veiculo.ano || ''}
+                              onChange={(e) => updateVeiculo(index, 'ano', parseInt(e.target.value) || 0)}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Cor</Label>
+                            <Input
+                              placeholder="Ex: Branco"
+                              value={veiculo.cor}
+                              onChange={(e) => updateVeiculo(index, 'cor', e.target.value)}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Placa</Label>
+                            <Input
+                              placeholder="ABC-1234"
+                              value={veiculo.placa}
+                              onChange={(e) => updateVeiculo(index, 'placa', e.target.value)}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Combustível</Label>
+                            <Select
+                              value={veiculo.combustivel}
+                              onValueChange={(value) => updateVeiculo(index, 'combustivel', value)}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="gasolina">Gasolina</SelectItem>
+                                <SelectItem value="etanol">Etanol</SelectItem>
+                                <SelectItem value="flex">Flex</SelectItem>
+                                <SelectItem value="diesel">Diesel</SelectItem>
+                                <SelectItem value="gnv">GNV</SelectItem>
+                                <SelectItem value="eletrico">Elétrico</SelectItem>
+                                <SelectItem value="hibrido">Híbrido</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>Chassi</Label>
+                            <Input
+                              placeholder="Número do chassi"
+                              value={veiculo.chassi}
+                              onChange={(e) => updateVeiculo(index, 'chassi', e.target.value)}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <Label>KM Atual</Label>
+                            <Input
+                              type="number"
+                              placeholder="0"
+                              value={veiculo.km_atual || ''}
+                              onChange={(e) => updateVeiculo(index, 'km_atual', parseInt(e.target.value) || 0)}
+                            />
+                          </div>
+                          
+                          <div className="space-y-2 md:col-span-3">
+                            <Label>Observações</Label>
+                            <Textarea
+                              placeholder="Observações sobre o veículo..."
+                              value={veiculo.observacoes}
+                              onChange={(e) => updateVeiculo(index, 'observacoes', e.target.value)}
+                              rows={2}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4 border-t">
             <Button
