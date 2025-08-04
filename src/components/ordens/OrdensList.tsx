@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Eye, Edit, Wrench, Calendar, Car, User } from 'lucide-react';
+import { Plus, Search, Eye, Edit, Wrench, Calendar, Car, User, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ItensServicoManager } from './ItensServicoManager';
 
 interface OrdemServico {
   id: string;
@@ -46,7 +47,9 @@ export const OrdensList: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [viewingOrdem, setViewingOrdem] = useState<OrdemServico | null>(null);
   const [editingOrdem, setEditingOrdem] = useState<OrdemServico | null>(null);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     cliente_id: '',
     veiculo_id: '',
@@ -55,6 +58,7 @@ export const OrdensList: React.FC = () => {
     observacoes: '',
     km_entrada: '',
     status: 'aguardando',
+    desconto: '0',
   });
   const { toast } = useToast();
 
@@ -183,6 +187,7 @@ export const OrdensList: React.FC = () => {
         observacoes: '',
         km_entrada: '',
         status: 'aguardando',
+        desconto: '0',
       });
       fetchOrdens();
     } catch (error: any) {
@@ -206,8 +211,14 @@ export const OrdensList: React.FC = () => {
       observacoes: ordem.observacoes || '',
       km_entrada: ordem.km_entrada?.toString() || '',
       status: ordem.status,
+      desconto: ordem.desconto?.toString() || '0',
     });
     setIsDialogOpen(true);
+  };
+
+  const openViewDialog = (ordem: OrdemServico) => {
+    setViewingOrdem(ordem);
+    setIsViewDialogOpen(true);
   };
 
   const openNewDialog = () => {
@@ -220,6 +231,7 @@ export const OrdensList: React.FC = () => {
       observacoes: '',
       km_entrada: '',
       status: 'aguardando',
+      desconto: '0',
     });
     setIsDialogOpen(true);
   };
@@ -390,6 +402,177 @@ export const OrdensList: React.FC = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Dialog para visualizar ordem completa */}
+        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Ordem de Serviço #{viewingOrdem?.numero_os}
+              </DialogTitle>
+              <DialogDescription>
+                Visualização completa da ordem de serviço
+              </DialogDescription>
+            </DialogHeader>
+
+            {viewingOrdem && (
+              <div className="space-y-6">
+                {/* Informações básicas */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <User className="w-5 h-5" />
+                        Cliente
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-medium">{viewingOrdem.cliente?.nome}</p>
+                      <p className="text-sm text-muted-foreground">{viewingOrdem.cliente?.telefone}</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <Car className="w-5 h-5" />
+                        Veículo
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="font-medium">
+                        {viewingOrdem.veiculo?.marca} {viewingOrdem.veiculo?.modelo}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {viewingOrdem.veiculo?.placa} - {viewingOrdem.veiculo?.ano}
+                      </p>
+                      {viewingOrdem.km_entrada && (
+                        <p className="text-sm text-muted-foreground">
+                          KM: {viewingOrdem.km_entrada.toLocaleString()}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Status e datas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Status e Cronologia</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Status Atual</Label>
+                        <div className="mt-1">
+                          {getStatusBadge(viewingOrdem.status)}
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Data de Entrada</Label>
+                        <p className="text-sm font-medium">
+                          {new Date(viewingOrdem.data_entrada).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                      {viewingOrdem.data_saida && (
+                        <div>
+                          <Label>Data de Saída</Label>
+                          <p className="text-sm font-medium">
+                            {new Date(viewingOrdem.data_saida).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Descrições */}
+                {(viewingOrdem.problema_relatado || viewingOrdem.diagnostico || viewingOrdem.observacoes) && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Descrições</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {viewingOrdem.problema_relatado && (
+                        <div>
+                          <Label>Problema Relatado</Label>
+                          <p className="text-sm mt-1 p-3 bg-muted rounded-md">
+                            {viewingOrdem.problema_relatado}
+                          </p>
+                        </div>
+                      )}
+                      {viewingOrdem.diagnostico && (
+                        <div>
+                          <Label>Diagnóstico</Label>
+                          <p className="text-sm mt-1 p-3 bg-muted rounded-md">
+                            {viewingOrdem.diagnostico}
+                          </p>
+                        </div>
+                      )}
+                      {viewingOrdem.observacoes && (
+                        <div>
+                          <Label>Observações</Label>
+                          <p className="text-sm mt-1 p-3 bg-muted rounded-md">
+                            {viewingOrdem.observacoes}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Itens de serviço */}
+                <ItensServicoManager 
+                  ordemId={viewingOrdem.id} 
+                  isReadOnly={true}
+                />
+
+                {/* Totais */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Resumo Financeiro</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <span>Subtotal:</span>
+                        <span>R$ {viewingOrdem.valor_total?.toFixed(2) || '0,00'}</span>
+                      </div>
+                      {viewingOrdem.desconto > 0 && (
+                        <div className="flex justify-between text-red-600">
+                          <span>Desconto:</span>
+                          <span>- R$ {viewingOrdem.desconto?.toFixed(2) || '0,00'}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-lg font-semibold border-t pt-2">
+                        <span>Total:</span>
+                        <span>R$ {viewingOrdem.valor_final?.toFixed(2) || '0,00'}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="flex justify-end space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsViewDialogOpen(false)}
+                  >
+                    Fechar
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setIsViewDialogOpen(false);
+                      openEditDialog(viewingOrdem);
+                    }}
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Editar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
 
       <Card>
@@ -500,6 +683,13 @@ export const OrdensList: React.FC = () => {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openViewDialog(ordem)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="outline"
                             size="sm"

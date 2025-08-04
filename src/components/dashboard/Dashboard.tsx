@@ -1,198 +1,410 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { 
   Users, 
   Car, 
   Wrench, 
+  Settings, 
+  TrendingUp, 
   Calendar,
-  TrendingUp,
   DollarSign,
   Clock,
+  Activity,
+  BarChart3,
   CheckCircle
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DashboardStats {
+  total_clientes: number;
+  total_veiculos: number;
+  total_ordens: number;
+  total_servicos: number;
+  ordens_hoje: number;
+  faturamento_mes: number;
+  ordens_por_status: {
+    aguardando: number;
+    em_andamento: number;
+    finalizado: number;
+    entregue: number;
+  };
+  recent_orders: any[];
+}
 
 export const Dashboard: React.FC = () => {
-  const stats = [
-    {
-      title: "Total de Clientes",
-      value: "152",
-      change: "+12%",
-      icon: Users,
-      color: "text-primary"
+  const [stats, setStats] = useState<DashboardStats>({
+    total_clientes: 0,
+    total_veiculos: 0,
+    total_ordens: 0,
+    total_servicos: 0,
+    ordens_hoje: 0,
+    faturamento_mes: 0,
+    ordens_por_status: {
+      aguardando: 0,
+      em_andamento: 0,
+      finalizado: 0,
+      entregue: 0,
     },
-    {
-      title: "Veículos Cadastrados",
-      value: "298",
-      change: "+8%",
-      icon: Car,
-      color: "text-accent"
-    },
-    {
-      title: "Serviços Ativos",
-      value: "23",
-      change: "+15%",
-      icon: Wrench,
-      color: "text-success"
-    },
-    {
-      title: "Receita Mensal",
-      value: "R$ 45.230",
-      change: "+22%",
-      icon: DollarSign,
-      color: "text-warning"
-    }
-  ];
+    recent_orders: []
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const recentServices = [
-    {
-      id: 1,
-      cliente: "João Silva",
-      veiculo: "Honda Civic 2020",
-      servico: "Troca de óleo",
-      status: "Concluído",
-      data: "2024-01-15"
-    },
-    {
-      id: 2,
-      cliente: "Maria Santos",
-      veiculo: "Toyota Corolla 2019",
-      servico: "Revisão geral",
-      status: "Em andamento",
-      data: "2024-01-14"
-    },
-    {
-      id: 3,
-      cliente: "Pedro Costa",
-      veiculo: "Ford Ka 2021",
-      servico: "Alinhamento",
-      status: "Aguardando",
-      data: "2024-01-13"
-    }
-  ];
+  useEffect(() => {
+    fetchDashboardStats();
+    
+    // Atualizar estatísticas a cada 30 segundos
+    const interval = setInterval(fetchDashboardStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Concluído':
-        return 'text-success bg-success/10';
-      case 'Em andamento':
-        return 'text-warning bg-warning/10';
-      case 'Aguardando':
-        return 'text-muted-foreground bg-muted';
-      default:
-        return 'text-muted-foreground bg-muted';
+  const fetchDashboardStats = async () => {
+    try {
+      // Buscar todas as estatísticas em paralelo
+      const [
+        clientesResult,
+        veiculosResult,
+        ordensResult,
+        servicosResult,
+        ordensHojeResult,
+        recentOrdersResult
+      ] = await Promise.all([
+        supabase.from('clientes').select('id', { count: 'exact' }),
+        supabase.from('veiculos').select('id', { count: 'exact' }),
+        supabase.from('ordens_servico').select('id, status, valor_final', { count: 'exact' }),
+        supabase.from('tipos_servicos').select('id', { count: 'exact' }),
+        supabase.from('ordens_servico')
+          .select('id', { count: 'exact' })
+          .gte('created_at', new Date().toISOString().split('T')[0]),
+        supabase.from('ordens_servico')
+          .select(`
+            id, numero_os, status, valor_final, created_at,
+            cliente:clientes(nome),
+            veiculo:veiculos(marca, modelo)
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ]);
+
+      const ordensData = ordensResult.data || [];
+      
+      // Calcular estatísticas por status
+      const statusStats = {
+        aguardando: ordensData.filter((o: any) => o.status === 'aguardando').length,
+        em_andamento: ordensData.filter((o: any) => o.status === 'em_andamento').length,
+        finalizado: ordensData.filter((o: any) => o.status === 'finalizado').length,
+        entregue: ordensData.filter((o: any) => o.status === 'entregue').length,
+      };
+
+      // Calcular faturamento do mês
+      const inicioMes = new Date();
+      inicioMes.setDate(1);
+      inicioMes.setHours(0, 0, 0, 0);
+
+      const { data: faturamentoData } = await supabase
+        .from('ordens_servico')
+        .select('valor_final')
+        .eq('status', 'entregue')
+        .gte('updated_at', inicioMes.toISOString());
+
+      const faturamentoMes = faturamentoData?.reduce((sum, ordem) => 
+        sum + (ordem.valor_final || 0), 0) || 0;
+
+      setStats({
+        total_clientes: clientesResult.count || 0,
+        total_veiculos: veiculosResult.count || 0,
+        total_ordens: ordensResult.count || 0,
+        total_servicos: servicosResult.count || 0,
+        ordens_hoje: ordensHojeResult.count || 0,
+        faturamento_mes: faturamentoMes,
+        ordens_por_status: statusStats,
+        recent_orders: recentOrdersResult.data || []
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      aguardando: { label: 'Aguardando', variant: 'secondary' as const },
+      em_andamento: { label: 'Em Andamento', variant: 'default' as const },
+      finalizado: { label: 'Finalizado', variant: 'outline' as const },
+      entregue: { label: 'Entregue', variant: 'default' as const },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig];
+    return (
+      <Badge variant={config?.variant || 'secondary'}>
+        {config?.label || status}
+      </Badge>
+    );
+  };
+
+  const totalOrdens = Object.values(stats.ordens_por_status).reduce((sum, count) => sum + count, 0);
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+        <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
+          <BarChart3 className="w-8 h-8 text-primary" />
+          Dashboard
+        </h1>
         <p className="text-muted-foreground">
-          Visão geral do sistema de gestão da oficina
+          Visão geral da sua oficina mecânica
         </p>
       </div>
 
-      {/* Stats Cards */}
+      {/* Cards de estatísticas principais */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {stats.map((stat) => {
-          const Icon = stat.icon;
-          return (
-            <Card key={stat.title} className="bg-gradient-card">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </CardTitle>
-                <Icon className={`w-5 h-5 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {stat.value}
-                </div>
-                <p className="text-xs text-success flex items-center mt-1">
-                  <TrendingUp className="w-3 h-3 mr-1" />
-                  {stat.change} em relação ao mês anterior
-                </p>
-              </CardContent>
-            </Card>
-          );
-        })}
+        <Card className="bg-gradient-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total de Clientes</CardTitle>
+            <Users className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total_clientes.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Clientes cadastrados no sistema
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Veículos Cadastrados</CardTitle>
+            <Car className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total_veiculos.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Veículos no banco de dados
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Ordens de Serviço</CardTitle>
+            <Wrench className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.total_ordens.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              +{stats.ordens_hoje} hoje
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Faturamento Mensal</CardTitle>
+            <DollarSign className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">R$ {stats.faturamento_mes.toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground">
+              Receita do mês atual
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Recent Services */}
+      {/* Status das ordens */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-primary" />
-              Serviços Recentes
+              <Activity className="w-5 h-5" />
+              Status das Ordens de Serviço
             </CardTitle>
             <CardDescription>
-              Últimos serviços realizados na oficina
+              Distribuição atual das ordens por status
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {recentServices.map((service) => (
-                <div
-                  key={service.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border bg-muted/30"
-                >
-                  <div className="space-y-1">
-                    <p className="font-medium text-foreground">
-                      {service.cliente}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {service.veiculo} • {service.servico}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {service.data}
-                    </p>
-                  </div>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(service.status)}`}
-                  >
-                    {service.status}
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Aguardando</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {stats.ordens_por_status.aguardando}
                   </span>
+                  <Badge variant="secondary">
+                    {totalOrdens > 0 ? Math.round((stats.ordens_por_status.aguardando / totalOrdens) * 100) : 0}%
+                  </Badge>
                 </div>
-              ))}
+              </div>
+              <Progress 
+                value={totalOrdens > 0 ? (stats.ordens_por_status.aguardando / totalOrdens) * 100 : 0} 
+                className="h-2"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Em Andamento</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {stats.ordens_por_status.em_andamento}
+                  </span>
+                  <Badge variant="default">
+                    {totalOrdens > 0 ? Math.round((stats.ordens_por_status.em_andamento / totalOrdens) * 100) : 0}%
+                  </Badge>
+                </div>
+              </div>
+              <Progress 
+                value={totalOrdens > 0 ? (stats.ordens_por_status.em_andamento / totalOrdens) * 100 : 0} 
+                className="h-2"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Finalizado</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {stats.ordens_por_status.finalizado}
+                  </span>
+                  <Badge variant="outline">
+                    {totalOrdens > 0 ? Math.round((stats.ordens_por_status.finalizado / totalOrdens) * 100) : 0}%
+                  </Badge>
+                </div>
+              </div>
+              <Progress 
+                value={totalOrdens > 0 ? (stats.ordens_por_status.finalizado / totalOrdens) * 100 : 0} 
+                className="h-2"
+              />
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Entregue</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    {stats.ordens_por_status.entregue}
+                  </span>
+                  <Badge variant="default">
+                    {totalOrdens > 0 ? Math.round((stats.ordens_por_status.entregue / totalOrdens) * 100) : 0}%
+                  </Badge>
+                </div>
+              </div>
+              <Progress 
+                value={totalOrdens > 0 ? (stats.ordens_por_status.entregue / totalOrdens) * 100 : 0} 
+                className="h-2"
+              />
             </div>
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
+        {/* Ordens recentes */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <CheckCircle className="w-5 h-5 text-primary" />
-              Ações Rápidas
+              <Clock className="w-5 h-5" />
+              Ordens Recentes
             </CardTitle>
             <CardDescription>
-              Acesso rápido às principais funcionalidades
+              Últimas ordens de serviço criadas
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg border border-border bg-gradient-primary/5 hover:bg-gradient-primary/10 transition-colors cursor-pointer">
-                <Users className="w-8 h-8 text-primary mb-2" />
-                <p className="font-medium text-foreground">Novo Cliente</p>
-                <p className="text-sm text-muted-foreground">Cadastrar cliente</p>
+            {isLoading ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">Carregando...</p>
               </div>
-              <div className="p-4 rounded-lg border border-border bg-gradient-accent/5 hover:bg-gradient-accent/10 transition-colors cursor-pointer">
-                <Car className="w-8 h-8 text-accent mb-2" />
-                <p className="font-medium text-foreground">Novo Veículo</p>
-                <p className="text-sm text-muted-foreground">Adicionar veículo</p>
+            ) : stats.recent_orders.length === 0 ? (
+              <div className="text-center py-8">
+                <Wrench className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma ordem encontrada
+                </p>
               </div>
-              <div className="p-4 rounded-lg border border-border bg-gradient-primary/5 hover:bg-gradient-primary/10 transition-colors cursor-pointer">
-                <Wrench className="w-8 h-8 text-success mb-2" />
-                <p className="font-medium text-foreground">Novo Serviço</p>
-                <p className="text-sm text-muted-foreground">Registrar serviço</p>
+            ) : (
+              <div className="space-y-4">
+                {stats.recent_orders.map((ordem) => (
+                  <div 
+                    key={ordem.id} 
+                    className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium text-sm">
+                        OS #{ordem.numero_os}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {ordem.cliente?.nome} - {ordem.veiculo?.marca} {ordem.veiculo?.modelo}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(ordem.created_at).toLocaleDateString('pt-BR')}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      {getStatusBadge(ordem.status)}
+                      <p className="text-sm font-medium mt-1">
+                        R$ {ordem.valor_final?.toFixed(2) || '0,00'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="p-4 rounded-lg border border-border bg-gradient-accent/5 hover:bg-gradient-accent/10 transition-colors cursor-pointer">
-                <Calendar className="w-8 h-8 text-warning mb-2" />
-                <p className="font-medium text-foreground">Agenda</p>
-                <p className="text-sm text-muted-foreground">Ver agendamentos</p>
-              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cards de ação rápida */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-gradient-primary text-primary-foreground">
+          <CardHeader>
+            <CardTitle className="text-lg">Resumo do Dia</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-sm opacity-90">
+                Ordens criadas hoje: <strong>{stats.ordens_hoje}</strong>
+              </p>
+              <p className="text-sm opacity-90">
+                Em andamento: <strong>{stats.ordens_por_status.em_andamento}</strong>
+              </p>
+              <p className="text-sm opacity-90">
+                Aguardando: <strong>{stats.ordens_por_status.aguardando}</strong>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-accent text-accent-foreground">
+          <CardHeader>
+            <CardTitle className="text-lg">Tipos de Serviços</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-2xl font-bold">{stats.total_servicos}</p>
+              <p className="text-sm opacity-90">
+                Serviços cadastrados no sistema
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Taxa de conclusão mensal
+              </p>
+              <p className="text-2xl font-bold text-primary">
+                {totalOrdens > 0 ? Math.round(((stats.ordens_por_status.entregue + stats.ordens_por_status.finalizado) / totalOrdens) * 100) : 0}%
+              </p>
             </div>
           </CardContent>
         </Card>
