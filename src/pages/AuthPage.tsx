@@ -97,25 +97,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            name: email === 'alfreire@admin.com' ? 'Administrador AlFreire' : email.split('@')[0]
-          }
+          emailRedirectTo: redirectUrl
         }
       });
       
       if (error) throw error;
       
-      // Se for o admin, automaticamente confirmar e atualizar cargo
-      if (email === 'alfreire@admin.com' && data.user) {
-        await supabase.from('profiles').update({ 
-          cargo: 'admin' 
-        }).eq('id', data.user.id);
-      }
-      
       toast({
         title: "Conta criada com sucesso!",
-        description: email === 'alfreire@admin.com' ? "Conta admin criada! Você já pode fazer login." : "Verifique seu email para confirmar a conta."
+        description: "Você já pode fazer login."
       });
       setActiveTab('login');
     } catch (error: any) {
