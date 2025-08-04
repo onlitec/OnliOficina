@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { VeiculoForm } from './VeiculoForm';
 
 interface Veiculo {
   id: string;
@@ -43,6 +44,7 @@ export const VeiculosList: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [editingVeiculo, setEditingVeiculo] = useState<Veiculo | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -75,6 +77,49 @@ export const VeiculosList: React.FC = () => {
     }
   };
 
+  const handleEdit = (veiculo: Veiculo) => {
+    setEditingVeiculo(veiculo);
+    setShowForm(true);
+  };
+
+  const handleDelete = async (veiculo: Veiculo) => {
+    if (!confirm(`Tem certeza que deseja excluir o veículo "${veiculo.marca} ${veiculo.modelo}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('veiculos')
+        .delete()
+        .eq('id', veiculo.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Veículo excluído!",
+        description: "O veículo foi excluído com sucesso.",
+      });
+
+      fetchVeiculos();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleFormSuccess = () => {
+    fetchVeiculos();
+    setEditingVeiculo(null);
+  };
+
+  const handleNewVeiculo = () => {
+    setEditingVeiculo(null);
+    setShowForm(true);
+  };
+
   const filteredVeiculos = veiculos.filter(veiculo =>
     veiculo.marca.toLowerCase().includes(searchTerm.toLowerCase()) ||
     veiculo.modelo.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -105,7 +150,7 @@ export const VeiculosList: React.FC = () => {
           </p>
         </div>
         <Button 
-          onClick={() => setShowForm(true)}
+          onClick={handleNewVeiculo}
           className="bg-primary hover:bg-primary-hover"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -250,11 +295,16 @@ export const VeiculosList: React.FC = () => {
                   </div>
                   
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => handleEdit(veiculo)}>
                       <Edit2 className="w-3 h-3 mr-1" />
                       Editar
                     </Button>
-                    <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(veiculo)}
+                    >
                       <Trash2 className="w-3 h-3" />
                     </Button>
                   </div>
@@ -278,6 +328,14 @@ export const VeiculosList: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Formulário */}
+      <VeiculoForm
+        isOpen={showForm}
+        onOpenChange={setShowForm}
+        veiculo={editingVeiculo}
+        onSuccess={handleFormSuccess}
+      />
     </div>
   );
 };

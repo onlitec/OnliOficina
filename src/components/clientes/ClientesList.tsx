@@ -3,11 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ClienteForm } from './ClienteForm';
 import { 
   Users, 
   Search, 
@@ -17,7 +15,8 @@ import {
   Phone, 
   Mail,
   MapPin,
-  Loader2
+  Hash,
+  Calendar
 } from 'lucide-react';
 
 interface Cliente {
@@ -37,23 +36,12 @@ interface Cliente {
 }
 
 export const ClientesList: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showForm, setShowForm] = useState(false);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showForm, setShowForm] = useState(false);
   const [editingCliente, setEditingCliente] = useState<Cliente | null>(null);
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    telefone: '',
-    endereco: '',
-    cidade: '',
-    estado: '',
-    cep: '',
-    cpf_cnpj: '',
-    observacoes: ''
-  });
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchClientes();
@@ -68,11 +56,10 @@ export const ClientesList: React.FC = () => {
 
       if (error) throw error;
       setClientes(data || []);
-    } catch (error) {
-      console.error('Erro ao buscar clientes:', error);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Não foi possível carregar os clientes.",
+        title: "Erro ao carregar clientes",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
@@ -80,124 +67,55 @@ export const ClientesList: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      if (editingCliente) {
-        const { error } = await supabase
-          .from('clientes')
-          .update(formData)
-          .eq('id', editingCliente.id);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Cliente atualizado com sucesso!",
-        });
-      } else {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) throw new Error('Usuário não autenticado');
-
-        const { error } = await supabase
-          .from('clientes')
-          .insert([{ ...formData, user_id: userData.user.id }]);
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Cliente cadastrado com sucesso!",
-        });
-      }
-
-      setShowForm(false);
-      setEditingCliente(null);
-      resetForm();
-      fetchClientes();
-    } catch (error) {
-      console.error('Erro ao salvar cliente:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível salvar o cliente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleEdit = (cliente: Cliente) => {
+    setEditingCliente(cliente);
+    setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir este cliente?')) return;
+  const handleDelete = async (cliente: Cliente) => {
+    if (!confirm(`Tem certeza que deseja excluir o cliente "${cliente.nome}"?`)) {
+      return;
+    }
 
     try {
       const { error } = await supabase
         .from('clientes')
         .delete()
-        .eq('id', id);
+        .eq('id', cliente.id);
 
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Cliente excluído com sucesso!",
+        title: "Cliente excluído!",
+        description: "O cliente foi excluído com sucesso.",
       });
 
       fetchClientes();
-    } catch (error) {
-      console.error('Erro ao excluir cliente:', error);
+    } catch (error: any) {
       toast({
-        title: "Erro",
-        description: "Não foi possível excluir o cliente.",
+        title: "Erro ao excluir",
+        description: error.message,
         variant: "destructive",
       });
     }
   };
 
-  const openEditDialog = (cliente: Cliente) => {
-    setEditingCliente(cliente);
-    setFormData({
-      nome: cliente.nome,
-      email: cliente.email || '',
-      telefone: cliente.telefone || '',
-      endereco: cliente.endereco || '',
-      cidade: cliente.cidade || '',
-      estado: cliente.estado || '',
-      cep: cliente.cep || '',
-      cpf_cnpj: cliente.cpf_cnpj || '',
-      observacoes: cliente.observacoes || ''
-    });
-    setShowForm(true);
-  };
-
-  const openNewDialog = () => {
+  const handleFormSuccess = () => {
+    fetchClientes();
     setEditingCliente(null);
-    resetForm();
-    setShowForm(true);
   };
 
-  const resetForm = () => {
-    setFormData({
-      nome: '',
-      email: '',
-      telefone: '',
-      endereco: '',
-      cidade: '',
-      estado: '',
-      cep: '',
-      cpf_cnpj: '',
-      observacoes: ''
-    });
+  const handleNewCliente = () => {
+    setEditingCliente(null);
+    setShowForm(true);
   };
 
   const filteredClientes = clientes.filter(cliente =>
     cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (cliente.codigo && cliente.codigo.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (cliente.email && cliente.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-    (cliente.telefone && cliente.telefone.includes(searchTerm)) ||
-    (cliente.cpf_cnpj && cliente.cpf_cnpj.includes(searchTerm))
+    cliente.cpf_cnpj?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.telefone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cliente.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -214,7 +132,7 @@ export const ClientesList: React.FC = () => {
           </p>
         </div>
         <Button 
-          onClick={openNewDialog}
+          onClick={handleNewCliente}
           className="bg-primary hover:bg-primary-hover"
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -284,8 +202,8 @@ export const ClientesList: React.FC = () => {
 
       {/* Loading State */}
       {isLoading ? (
-        <div className="flex justify-center items-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="text-center py-8">
+          <p className="text-muted-foreground">Carregando clientes...</p>
         </div>
       ) : (
         <>
@@ -296,15 +214,18 @@ export const ClientesList: React.FC = () => {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg text-foreground">
-                        {cliente.nome}
-                      </CardTitle>
-                      <CardDescription className="mt-1 space-y-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CardTitle className="text-lg text-foreground">
+                          {cliente.nome}
+                        </CardTitle>
                         {cliente.codigo && (
-                          <div className="text-primary font-medium">
+                          <Badge variant="outline" className="text-xs">
+                            <Hash className="w-3 h-3 mr-1" />
                             {cliente.codigo}
-                          </div>
+                          </Badge>
                         )}
+                      </div>
+                      <CardDescription className="mt-1">
                         {cliente.cpf_cnpj && `CPF/CNPJ: ${cliente.cpf_cnpj}`}
                       </CardDescription>
                     </div>
@@ -336,9 +257,10 @@ export const ClientesList: React.FC = () => {
                   </div>
                   
                   <div className="pt-2 border-t border-border">
-                    <p className="text-xs text-muted-foreground">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Calendar className="w-3 h-3" />
                       Cadastrado em: {new Date(cliente.created_at).toLocaleDateString('pt-BR')}
-                    </p>
+                    </div>
                   </div>
                   
                   <div className="flex gap-2 pt-2">
@@ -346,7 +268,7 @@ export const ClientesList: React.FC = () => {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={() => openEditDialog(cliente)}
+                      onClick={() => handleEdit(cliente)}
                     >
                       <Edit2 className="w-3 h-3 mr-1" />
                       Editar
@@ -355,7 +277,7 @@ export const ClientesList: React.FC = () => {
                       variant="outline" 
                       size="sm" 
                       className="text-destructive hover:text-destructive"
-                      onClick={() => handleDelete(cliente.id)}
+                      onClick={() => handleDelete(cliente)}
                     >
                       <Trash2 className="w-3 h-3" />
                     </Button>
@@ -378,7 +300,7 @@ export const ClientesList: React.FC = () => {
               {searchTerm ? 'Tente ajustar os termos de busca.' : 'Comece adicionando seu primeiro cliente.'}
             </p>
             <Button 
-              onClick={openNewDialog}
+              onClick={handleNewCliente}
               className="mt-4"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -388,128 +310,13 @@ export const ClientesList: React.FC = () => {
         </Card>
       )}
 
-      {/* Form Dialog */}
-      <Dialog open={showForm} onOpenChange={setShowForm}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {editingCliente ? 'Editar Cliente' : 'Novo Cliente'}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="nome">Nome *</Label>
-                <Input
-                  id="nome"
-                  value={formData.nome}
-                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
-                <Input
-                  id="cpf_cnpj"
-                  value={formData.cpf_cnpj}
-                  onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="telefone">Telefone</Label>
-                <Input
-                  id="telefone"
-                  value={formData.telefone}
-                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cep">CEP</Label>
-                <Input
-                  id="cep"
-                  value={formData.cep}
-                  onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cidade">Cidade</Label>
-                <Input
-                  id="cidade"
-                  value={formData.cidade}
-                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="estado">Estado</Label>
-                <Input
-                  id="estado"
-                  value={formData.estado}
-                  onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="endereco">Endereço</Label>
-              <Input
-                id="endereco"
-                value={formData.endereco}
-                onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="observacoes">Observações</Label>
-              <Textarea
-                id="observacoes"
-                value={formData.observacoes}
-                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                rows={3}
-              />
-            </div>
-            
-            <div className="flex justify-end gap-2 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setShowForm(false)}
-                disabled={isSubmitting}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  editingCliente ? 'Atualizar' : 'Cadastrar'
-                )}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Formulário */}
+      <ClienteForm
+        isOpen={showForm}
+        onOpenChange={setShowForm}
+        cliente={editingCliente}
+        onSuccess={handleFormSuccess}
+      />
     </div>
   );
 };
