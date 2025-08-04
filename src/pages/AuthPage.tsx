@@ -203,10 +203,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </Tabs>
             
             <div className="mt-6 p-4 bg-muted rounded-lg">
-              <p className="text-sm text-muted-foreground text-center">
-                <strong>Teste com qualquer email válido</strong><br />
-                Exemplo: admin@teste.com | senha: 123456
-              </p>
+              
             </div>
           </CardContent>
         </Card>
