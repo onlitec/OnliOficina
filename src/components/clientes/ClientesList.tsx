@@ -22,6 +22,7 @@ import {
 
 interface Cliente {
   id: string;
+  codigo?: string;
   nome: string;
   email?: string;
   telefone?: string;
@@ -193,6 +194,7 @@ export const ClientesList: React.FC = () => {
 
   const filteredClientes = clientes.filter(cliente =>
     cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (cliente.codigo && cliente.codigo.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (cliente.email && cliente.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (cliente.telefone && cliente.telefone.includes(searchTerm)) ||
     (cliente.cpf_cnpj && cliente.cpf_cnpj.includes(searchTerm))
@@ -226,7 +228,7 @@ export const ClientesList: React.FC = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
-              placeholder="Buscar clientes por nome, email ou telefone..."
+              placeholder="Buscar por nome, código, email ou telefone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -297,7 +299,12 @@ export const ClientesList: React.FC = () => {
                       <CardTitle className="text-lg text-foreground">
                         {cliente.nome}
                       </CardTitle>
-                      <CardDescription className="mt-1">
+                      <CardDescription className="mt-1 space-y-1">
+                        {cliente.codigo && (
+                          <div className="text-primary font-medium">
+                            {cliente.codigo}
+                          </div>
+                        )}
                         {cliente.cpf_cnpj && `CPF/CNPJ: ${cliente.cpf_cnpj}`}
                       </CardDescription>
                     </div>

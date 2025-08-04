@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           cep: string | null
           cidade: string | null
+          codigo: string | null
           cpf_cnpj: string | null
           created_at: string
           email: string | null
@@ -33,6 +34,7 @@ export type Database = {
         Insert: {
           cep?: string | null
           cidade?: string | null
+          codigo?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -48,6 +50,7 @@ export type Database = {
         Update: {
           cep?: string | null
           cidade?: string | null
+          codigo?: string | null
           cpf_cnpj?: string | null
           created_at?: string
           email?: string | null
@@ -119,6 +122,7 @@ export type Database = {
       ordens_servico: {
         Row: {
           cliente_id: string
+          codigo: string | null
           created_at: string
           data_entrada: string
           data_saida: string | null
@@ -138,6 +142,7 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
+          codigo?: string | null
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
@@ -157,6 +162,7 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
+          codigo?: string | null
           created_at?: string
           data_entrada?: string
           data_saida?: string | null
@@ -259,6 +265,7 @@ export type Database = {
           ano: number | null
           chassi: string | null
           cliente_id: string
+          codigo: string | null
           combustivel: string | null
           cor: string | null
           created_at: string
@@ -275,6 +282,7 @@ export type Database = {
           ano?: number | null
           chassi?: string | null
           cliente_id: string
+          codigo?: string | null
           combustivel?: string | null
           cor?: string | null
           created_at?: string
@@ -291,6 +299,7 @@ export type Database = {
           ano?: number | null
           chassi?: string | null
           cliente_id?: string
+          codigo?: string | null
           combustivel?: string | null
           cor?: string | null
           created_at?: string
