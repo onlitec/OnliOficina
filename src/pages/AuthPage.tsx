@@ -85,19 +85,29 @@ export const AuthPage: React.FC<AuthPageProps> = ({
     setIsLoading(true);
     try {
       const redirectUrl = `${window.location.origin}/`;
-      const {
-        error
-      } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: email === 'alfreire@admin.com' ? 'Administrador AlFreire' : email.split('@')[0]
+          }
         }
       });
+      
       if (error) throw error;
+      
+      // Se for o admin, automaticamente confirmar e atualizar cargo
+      if (email === 'alfreire@admin.com' && data.user) {
+        await supabase.from('profiles').update({ 
+          cargo: 'admin' 
+        }).eq('id', data.user.id);
+      }
+      
       toast({
         title: "Conta criada com sucesso!",
-        description: "Verifique seu email para confirmar a conta."
+        description: email === 'alfreire@admin.com' ? "Conta admin criada! Você já pode fazer login." : "Verifique seu email para confirmar a conta."
       });
       setActiveTab('login');
     } catch (error: any) {
@@ -127,7 +137,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
           
           <CardContent>
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="login">Login</TabsTrigger>
+                <TabsTrigger value="signup">Cadastrar</TabsTrigger>
+              </TabsList>
               
               <TabsContent value="login" className="space-y-4 mt-6">
                 <form onSubmit={handleLogin} className="space-y-4">
@@ -203,7 +216,10 @@ export const AuthPage: React.FC<AuthPageProps> = ({
             </Tabs>
             
             <div className="mt-6 p-4 bg-muted rounded-lg">
-              
+              <p className="text-sm text-muted-foreground text-center">
+                <strong>Usuário admin:</strong> alfreire@admin.com<br />
+                <strong>Senha:</strong> *M3a74g20M
+              </p>
             </div>
           </CardContent>
         </Card>
