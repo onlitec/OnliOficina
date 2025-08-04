@@ -95,10 +95,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       const redirectUrl = `${window.location.origin}/`;
       const { data, error } = await supabase.auth.signUp({
         email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl
-        }
+        password
       });
       
       if (error) throw error;
