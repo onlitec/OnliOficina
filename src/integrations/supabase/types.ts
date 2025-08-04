@@ -269,6 +269,7 @@ export type Database = {
           combustivel: string | null
           cor: string | null
           created_at: string
+          foto: string | null
           id: string
           km_atual: number | null
           marca: string
@@ -286,6 +287,7 @@ export type Database = {
           combustivel?: string | null
           cor?: string | null
           created_at?: string
+          foto?: string | null
           id?: string
           km_atual?: number | null
           marca: string
@@ -303,6 +305,7 @@ export type Database = {
           combustivel?: string | null
           cor?: string | null
           created_at?: string
+          foto?: string | null
           id?: string
           km_atual?: number | null
           marca?: string
