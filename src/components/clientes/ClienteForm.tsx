@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Save, X, Upload, Image as ImageIcon, Car, Plus, Trash2 } from 'lucide-react';
+import { User, Save, X, Upload, Image as ImageIcon, Car, Plus, Trash2, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 interface Cliente {
   id?: string;
@@ -35,6 +36,9 @@ interface Veiculo {
   combustivel?: string;
   km_atual?: number;
   observacoes?: string;
+  foto?: string;
+  photoFile?: File | null;
+  photoPreview?: string | null;
 }
 
 interface ClienteFormProps {
@@ -63,28 +67,53 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
   });
   const [veiculos, setVeiculos] = useState<Veiculo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [photoFile, setPhotoFile] = useState<File | null>(null);
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVehiclePhotoChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotoFile(file);
       const reader = new FileReader();
       reader.onload = (e) => {
-        setPhotoPreview(e.target?.result as string);
+        updateVeiculo(index, 'photoPreview', e.target?.result as string);
+        updateVeiculo(index, 'photoFile', file);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const uploadPhoto = async (clienteId: string): Promise<string | null> => {
+  const handleCameraCapture = async (index: number) => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: false,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+
+      if (image.dataUrl) {
+        updateVeiculo(index, 'photoPreview', image.dataUrl);
+        
+        // Converter dataUrl para File
+        const response = await fetch(image.dataUrl);
+        const blob = await response.blob();
+        const file = new File([blob], `vehicle-${index}-${Date.now()}.jpg`, { type: 'image/jpeg' });
+        updateVeiculo(index, 'photoFile', file);
+      }
+    } catch (error) {
+      toast({
+        title: "Erro na câmera",
+        description: "Não foi possível capturar a foto",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const uploadVehiclePhoto = async (veiculoId: string, photoFile: File): Promise<string | null> => {
     if (!photoFile) return null;
 
     try {
       const fileExt = photoFile.name.split('.').pop();
-      const fileName = `${clienteId}/photo.${fileExt}`;
+      const fileName = `vehicles/${veiculoId}/photo.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('vehicle-photos')
@@ -113,7 +142,9 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
       chassi: '',
       combustivel: '',
       km_atual: 0,
-      observacoes: ''
+      observacoes: '',
+      photoFile: null,
+      photoPreview: null
     }]);
   };
 
@@ -121,7 +152,7 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
     setVeiculos(veiculos.filter((_, i) => i !== index));
   };
 
-  const updateVeiculo = (index: number, field: keyof Veiculo, value: string | number) => {
+  const updateVeiculo = (index: number, field: keyof Veiculo, value: any) => {
     const updated = [...veiculos];
     updated[index] = { ...updated[index], [field]: value };
     setVeiculos(updated);
@@ -171,32 +202,48 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
 
         // Criar veículos associados ao cliente
         if (veiculos.length > 0) {
-          const veiculosData = veiculos
-            .filter(v => v.marca && v.modelo) // Só criar veículos com marca e modelo
-            .map(veiculo => ({
-              ...veiculo,
+          const veiculosValidados = veiculos.filter(v => v.marca && v.modelo);
+          
+          for (const veiculo of veiculosValidados) {
+            const veiculoData = {
+              marca: veiculo.marca,
+              modelo: veiculo.modelo,
+              ano: veiculo.ano,
+              cor: veiculo.cor,
+              placa: veiculo.placa,
+              chassi: veiculo.chassi,
+              combustivel: veiculo.combustivel,
+              km_atual: veiculo.km_atual,
+              observacoes: veiculo.observacoes,
               cliente_id: savedCliente.id,
               user_id: user.id
-            }));
+            };
 
-          if (veiculosData.length > 0) {
-            const { error: veiculosError } = await supabase
+            const { data: savedVeiculo, error: veiculoError } = await supabase
               .from('veiculos')
-              .insert(veiculosData);
+              .insert([veiculoData])
+              .select()
+              .single();
 
-            if (veiculosError) throw veiculosError;
+            if (veiculoError) throw veiculoError;
+
+            // Upload da foto se houver
+            if (veiculo.photoFile && savedVeiculo) {
+              const photoUrl = await uploadVehiclePhoto(savedVeiculo.id, veiculo.photoFile);
+              if (photoUrl) {
+                await supabase
+                  .from('veiculos')
+                  .update({ foto: photoUrl })
+                  .eq('id', savedVeiculo.id);
+              }
+            }
           }
         }
 
         toast({
           title: "Cliente criado!",
-          description: `${formData.nome} foi cadastrado com código ${savedCliente.codigo}.${veiculos.length > 0 ? ` ${veiculos.filter(v => v.marca && v.modelo).length} veículo(s) adicionado(s).` : ''}`,
+          description: `${formData.nome} foi cadastrado com código ${savedCliente.codigo}.${veiculos.filter(v => v.marca && v.modelo).length > 0 ? ` ${veiculos.filter(v => v.marca && v.modelo).length} veículo(s) adicionado(s).` : ''}`,
         });
-      }
-
-      // Upload da foto se houver
-      if (photoFile && savedCliente) {
-        await uploadPhoto(savedCliente.id);
       }
 
       onSuccess();
@@ -215,8 +262,6 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
         observacoes: ''
       });
       setVeiculos([]);
-      setPhotoFile(null);
-      setPhotoPreview(null);
 
     } catch (error: any) {
       toast({
@@ -246,155 +291,101 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Foto do Cliente */}
-            <div className="lg:col-span-1">
-              <Card>
-                <CardContent className="p-4">
-                  <Label className="text-sm font-medium">Foto do Cliente</Label>
-                  <div className="mt-2 space-y-4">
-                    {photoPreview ? (
-                      <div className="relative">
-                        <img 
-                          src={photoPreview} 
-                          alt="Preview" 
-                          className="w-full h-40 object-cover rounded-lg"
-                        />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="absolute top-2 right-2"
-                          onClick={() => {
-                            setPhotoPreview(null);
-                            setPhotoFile(null);
-                          }}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
-                        <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                        <p className="text-sm text-muted-foreground mb-2">
-                          Nenhuma foto selecionada
-                        </p>
-                      </div>
-                    )}
-                    
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoChange}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <Button type="button" variant="outline" className="w-full">
-                        <Upload className="w-4 h-4 mr-2" />
-                        Selecionar Foto
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Dados do Cliente */}
-            <div className="lg:col-span-2 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="nome">Nome Completo *</Label>
-                  <Input
-                    id="nome"
-                    placeholder="Nome do cliente"
-                    value={formData.nome}
-                    onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
-                  <Input
-                    id="cpf_cnpj"
-                    placeholder="000.000.000-00"
-                    value={formData.cpf_cnpj}
-                    onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="telefone">Telefone</Label>
-                  <Input
-                    id="telefone"
-                    placeholder="(00) 00000-0000"
-                    value={formData.telefone}
-                    onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="cliente@email.com"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cep">CEP</Label>
-                  <Input
-                    id="cep"
-                    placeholder="00000-000"
-                    value={formData.cep}
-                    onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="endereco">Endereço</Label>
-                  <Input
-                    id="endereco"
-                    placeholder="Rua, número"
-                    value={formData.endereco}
-                    onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="cidade">Cidade</Label>
-                  <Input
-                    id="cidade"
-                    placeholder="Nome da cidade"
-                    value={formData.cidade}
-                    onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="estado">Estado</Label>
-                  <Input
-                    id="estado"
-                    placeholder="UF"
-                    value={formData.estado}
-                    onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
-                  />
-                </div>
+          {/* Dados do Cliente */}
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="nome">Nome Completo *</Label>
+                <Input
+                  id="nome"
+                  placeholder="Nome do cliente"
+                  value={formData.nome}
+                  onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações</Label>
-                <Textarea
-                  id="observacoes"
-                  placeholder="Informações adicionais sobre o cliente..."
-                  value={formData.observacoes}
-                  onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
-                  rows={3}
+                <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
+                <Input
+                  id="cpf_cnpj"
+                  placeholder="000.000.000-00"
+                  value={formData.cpf_cnpj}
+                  onChange={(e) => setFormData({ ...formData, cpf_cnpj: e.target.value })}
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input
+                  id="telefone"
+                  placeholder="(00) 00000-0000"
+                  value={formData.telefone}
+                  onChange={(e) => setFormData({ ...formData, telefone: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="email">E-mail</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="cliente@email.com"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cep">CEP</Label>
+                <Input
+                  id="cep"
+                  placeholder="00000-000"
+                  value={formData.cep}
+                  onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="endereco">Endereço</Label>
+                <Input
+                  id="endereco"
+                  placeholder="Rua, número"
+                  value={formData.endereco}
+                  onChange={(e) => setFormData({ ...formData, endereco: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input
+                  id="cidade"
+                  placeholder="Nome da cidade"
+                  value={formData.cidade}
+                  onChange={(e) => setFormData({ ...formData, cidade: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="estado">Estado</Label>
+                <Input
+                  id="estado"
+                  placeholder="UF"
+                  value={formData.estado}
+                  onChange={(e) => setFormData({ ...formData, estado: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="observacoes">Observações</Label>
+              <Textarea
+                id="observacoes"
+                placeholder="Informações adicionais sobre o cliente..."
+                value={formData.observacoes}
+                onChange={(e) => setFormData({ ...formData, observacoes: e.target.value })}
+                rows={3}
+              />
             </div>
           </div>
 
@@ -433,7 +424,67 @@ export const ClienteForm: React.FC<ClienteFormProps> = ({
                           </Button>
                         </div>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                        {/* Seção de Foto do Veículo */}
+                        <div className="mb-6">
+                          <Label className="text-sm font-medium">Foto do Veículo</Label>
+                          <div className="mt-2 space-y-4">
+                            {veiculo.photoPreview ? (
+                              <div className="relative">
+                                <img 
+                                  src={veiculo.photoPreview} 
+                                  alt="Preview do veículo" 
+                                  className="w-full h-40 object-cover rounded-lg"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="absolute top-2 right-2"
+                                  onClick={() => {
+                                    updateVeiculo(index, 'photoPreview', null);
+                                    updateVeiculo(index, 'photoFile', null);
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+                                <ImageIcon className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                                <p className="text-sm text-muted-foreground mb-2">
+                                  Nenhuma foto selecionada
+                                </p>
+                              </div>
+                            )}
+                            
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="relative">
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={(e) => handleVehiclePhotoChange(index, e)}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                />
+                                <Button type="button" variant="outline" className="w-full">
+                                  <Upload className="w-4 h-4 mr-2" />
+                                  Galeria
+                                </Button>
+                              </div>
+                              
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                className="w-full"
+                                onClick={() => handleCameraCapture(index)}
+                              >
+                                <Camera className="w-4 h-4 mr-2" />
+                                Câmera
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-2">
                             <Label>Marca *</Label>
                             <Input
