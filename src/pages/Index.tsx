@@ -4,6 +4,8 @@ import { Navigation } from '@/components/ui/navigation';
 import { Dashboard } from '@/components/dashboard/Dashboard';
 import { ClientesList } from '@/components/clientes/ClientesList';
 import { VeiculosList } from '@/components/veiculos/VeiculosList';
+import { OrdensList } from '@/components/ordens/OrdensList';
+import { ServicosList } from '@/components/servicos/ServicosList';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Download, Smartphone, Globe } from 'lucide-react';
@@ -85,6 +87,10 @@ const Index = () => {
         return <ClientesList />;
       case 'veiculos':
         return <VeiculosList />;
+      case 'ordens':
+        return <OrdensList />;
+      case 'servicos':
+        return <ServicosList />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
       default:

@@ -7,7 +7,9 @@ import {
   LogOut, 
   Menu,
   Wrench,
-  Download
+  Download,
+  LayoutDashboard,
+  FileText
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -27,9 +29,11 @@ export const Navigation: React.FC<NavigationProps> = ({
   className
 }) => {
   const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: Wrench },
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'clientes', label: 'Clientes', icon: Users },
     { id: 'veiculos', label: 'Veículos', icon: Car },
+    { id: 'ordens', label: 'Ordens de Serviço', icon: Wrench },
+    { id: 'servicos', label: 'Tipos de Serviços', icon: FileText },
     { id: 'configuracoes', label: 'Configurações', icon: Settings },
   ];
 
@@ -43,7 +47,7 @@ export const Navigation: React.FC<NavigationProps> = ({
         <div className="w-10 h-10 bg-gradient-primary rounded-lg flex items-center justify-center">
           <Wrench className="w-6 h-6 text-primary-foreground" />
         </div>
-        <h1 className="text-xl font-bold text-foreground">AutoGest</h1>
+        <h1 className="text-xl font-bold text-foreground">OnliOficina</h1>
       </div>
 
       {/* Menu Items */}
