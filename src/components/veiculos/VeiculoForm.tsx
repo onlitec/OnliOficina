@@ -130,9 +130,17 @@ export const VeiculoForm: React.FC<VeiculoFormProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
 
+      let photoUrl = null;
+      
+      // Upload da foto primeiro se houver
+      if (photoFile && veiculo?.id) {
+        photoUrl = await uploadPhoto(veiculo.id);
+      }
+
       const veiculoData = {
         ...formData,
-        user_id: user.id
+        user_id: user.id,
+        ...(photoUrl && { foto: photoUrl })
       };
 
       let savedVeiculo;
@@ -164,15 +172,21 @@ export const VeiculoForm: React.FC<VeiculoFormProps> = ({
         if (error) throw error;
         savedVeiculo = data;
 
+        // Upload da foto após criar o veículo
+        if (photoFile && savedVeiculo) {
+          const uploadedPhotoUrl = await uploadPhoto(savedVeiculo.id);
+          if (uploadedPhotoUrl) {
+            await supabase
+              .from('veiculos')
+              .update({ foto: uploadedPhotoUrl })
+              .eq('id', savedVeiculo.id);
+          }
+        }
+
         toast({
           title: "Veículo criado!",
           description: `${formData.marca} ${formData.modelo} foi cadastrado com código ${savedVeiculo.codigo}.`,
         });
-      }
-
-      // Upload da foto se houver
-      if (photoFile && savedVeiculo) {
-        await uploadPhoto(savedVeiculo.id);
       }
 
       onSuccess();
