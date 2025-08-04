@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { LoginForm } from '@/components/auth/LoginForm';
+import React, { useState, useEffect } from 'react';
+import { AuthPage } from './AuthPage';
 import { Navigation } from '@/components/ui/navigation';
 import { Dashboard } from '@/components/dashboard/Dashboard';
 import { ClientesList } from '@/components/clientes/ClientesList';
@@ -8,27 +8,51 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Settings, Download, Smartphone, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import type { User, Session } from '@supabase/supabase-js';
 
 const Index = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [activeSection, setActiveSection] = useState('dashboard');
   const { toast } = useToast();
 
-  const handleLogin = async (username: string, password: string) => {
-    // Simular autenticação
-    if (username === 'AdminSuperUser' && password === 'admin123') {
-      setIsAuthenticated(true);
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao AutoGest",
-      });
-    } else {
-      throw new Error('Credenciais inválidas');
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogin = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    if (error) {
+      throw error;
     }
+    
+    toast({
+      title: "Login realizado com sucesso!",
+      description: "Bem-vindo ao AutoGest",
+    });
   };
 
-  const handleLogout = () => {
-    setIsAuthenticated(false);
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setActiveSection('dashboard');
     toast({
       title: "Logout realizado",
@@ -58,8 +82,8 @@ const Index = () => {
     }
   };
 
-  if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />;
+  if (!session || !user) {
+    return <AuthPage onAuthSuccess={() => {}} />;
   }
 
   return (
