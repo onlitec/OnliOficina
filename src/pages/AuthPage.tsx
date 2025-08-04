@@ -33,20 +33,28 @@ export const AuthPage: React.FC<AuthPageProps> = ({
       return;
     }
     setIsLoading(true);
+    console.log('Tentando fazer login na AuthPage:', { email });
+    
     try {
-      const {
-        error
-      } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      if (error) throw error;
+      
+      console.log('Resultado da autenticação:', { data, error });
+      
+      if (error) {
+        console.error('Erro específico:', error.message, error);
+        throw error;
+      }
+      
       toast({
         title: "Login realizado com sucesso!",
-        description: "Bem-vindo ao AutoGest"
+        description: "Bem-vindo ao OnliOficina"
       });
       onAuthSuccess();
     } catch (error: any) {
+      console.error('Erro capturado no login:', error);
       toast({
         title: "Erro no login",
         description: error.message || "Email ou senha incorretos.",

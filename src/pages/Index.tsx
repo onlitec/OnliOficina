@@ -36,19 +36,29 @@ const Index = () => {
   }, []);
 
   const handleLogin = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    console.log('Tentando login com:', { email });
     
-    if (error) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      console.log('Resultado do login:', { data, error });
+      
+      if (error) {
+        console.error('Erro de autenticação:', error);
+        throw error;
+      }
+      
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Bem-vindo ao AutoGest",
+      });
+    } catch (error: any) {
+      console.error('Erro capturado no handleLogin:', error);
       throw error;
     }
-    
-    toast({
-      title: "Login realizado com sucesso!",
-      description: "Bem-vindo ao AutoGest",
-    });
   };
 
   const handleLogout = async () => {
