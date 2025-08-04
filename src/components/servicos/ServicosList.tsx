@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -321,6 +322,7 @@ export const ServicosList: React.FC = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Código</TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Descrição</TableHead>
                     <TableHead>Preço Base</TableHead>
@@ -331,6 +333,11 @@ export const ServicosList: React.FC = () => {
                 <TableBody>
                   {filteredServicos.map((servico) => (
                     <TableRow key={servico.id}>
+                      <TableCell>
+                        <Badge variant="outline" className="text-xs font-mono">
+                          SRV-{new Date(servico.created_at).getFullYear()}-{String(filteredServicos.indexOf(servico) + 1).padStart(4, '0')}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-medium">
                         {servico.nome}
                       </TableCell>
