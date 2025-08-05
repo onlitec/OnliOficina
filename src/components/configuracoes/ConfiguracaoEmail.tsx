@@ -32,7 +32,7 @@ export function ConfiguracaoEmail() {
   const [loading, setLoading] = useState(false);
   const [testingEmail, setTestingEmail] = useState(false);
   const [configuracao, setConfiguracao] = useState<ConfiguracaoEmail | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
 
   const {
     register,
@@ -95,7 +95,7 @@ export function ConfiguracaoEmail() {
           ativo: data.ativo || true,
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao buscar configuração de email:', error);
       toast.error('Erro ao carregar configuração de email');
     }
@@ -132,7 +132,7 @@ export function ConfiguracaoEmail() {
 
       toast.success('Configuração de email salva com sucesso!');
       fetchConfiguracao();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao salvar configuração:', error);
       toast.error('Erro ao salvar configuração de email');
     } finally {
@@ -159,7 +159,7 @@ export function ConfiguracaoEmail() {
       } else {
         toast.error(data.error || 'Erro ao testar conexão');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao testar email:', error);
       toast.error('Erro ao testar conexão de email');
     } finally {

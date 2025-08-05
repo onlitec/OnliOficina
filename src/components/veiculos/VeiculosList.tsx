@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,9 +49,9 @@ export const VeiculosList: React.FC = () => {
 
   useEffect(() => {
     fetchVeiculos();
-  }, []);
+  }, [fetchVeiculos]);
 
-  const fetchVeiculos = async () => {
+  const fetchVeiculos = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('veiculos')
@@ -66,16 +66,17 @@ export const VeiculosList: React.FC = () => {
 
       if (error) throw error;
       setVeiculos(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar veículos';
       toast({
         title: "Erro ao carregar veículos",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   const handleEdit = (veiculo: Veiculo) => {
     setEditingVeiculo(veiculo);
@@ -101,10 +102,11 @@ export const VeiculosList: React.FC = () => {
       });
 
       fetchVeiculos();
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao excluir veículo';
       toast({
         title: "Erro ao excluir",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }

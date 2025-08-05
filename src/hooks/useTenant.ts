@@ -2,40 +2,47 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
-export interface Tenant {
-  id: string;
-  name: string;
-  description?: string;
-  nome: string;
-  slug: string;
-  cnpj?: string;
-  telefone?: string;
-  email?: string;
-  endereco?: string;
-  cidade?: string;
-  estado?: string;
-  cep?: string;
-  logo_url?: string;
-  plano: 'basico' | 'premium' | 'enterprise';
-  status: 'ativo' | 'suspenso' | 'cancelado';
-  data_criacao: string;
-  data_vencimento?: string;
-  configuracoes: Record<string, any>;
-  limites: {
-    max_usuarios: number;
-    max_clientes: number;
-    max_veiculos: number;
-    max_ordens_mes: number;
-    features: string[];
-  };
-  user_id: string;
-  created_at: string;
-  updated_at: string;
+// Interfaces simplificadas para compatibilidade com o schema atual
+export interface TenantConfiguracoes {
+  tema?: string;
+  idioma?: string;
+  moeda?: string;
+  fuso_horario?: string;
+  notificacoes_email?: boolean;
+  backup_automatico?: boolean;
+  [key: string]: string | number | boolean | undefined;
 }
 
+export interface TenantLimites {
+  max_usuarios: number;
+  max_clientes: number;
+  max_veiculos: number;
+  max_ordens_mes: number;
+  features: string[];
+  [key: string]: number | string[];
+}
+
+// Interface baseada na tabela configuracao_empresa existente
+export interface Tenant {
+  id: string;
+  nome_empresa: string;
+  cnpj?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+  endereco?: string | null;
+  cidade?: string | null;
+  estado?: string | null;
+  cep?: string | null;
+  logo_url?: string | null;
+  site?: string | null;
+  user_id: string;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+// Interface simplificada para usuário atual
 export interface TenantUser {
   id: string;
-  tenant_id: string;
   user_id: string;
   role: 'admin' | 'gerente' | 'funcionario';
   status: 'ativo' | 'inativo';
@@ -44,9 +51,9 @@ export interface TenantUser {
   updated_at: string;
 }
 
+// Interface placeholder para convites (não implementado no schema atual)
 export interface TenantInvite {
   id: string;
-  tenant_id: string;
   email: string;
   role: 'admin' | 'gerente' | 'funcionario';
   token: string;
@@ -58,16 +65,12 @@ export interface TenantInvite {
   updated_at: string;
 }
 
+// Interface para estatísticas baseada em dados reais
 export interface TenantStatistics {
-  tenant_id: string;
-  tenant_nome: string;
-  plano: string;
-  total_usuarios: number;
   total_clientes: number;
   total_veiculos: number;
-  ordens_mes_atual: number;
-  ordens_em_andamento: number;
-  limites: Record<string, any>;
+  total_pecas: number;
+  total_ordens: number;
 }
 
 export const useTenant = () => {
@@ -78,10 +81,47 @@ export const useTenant = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Carregar tenants do usuário
+  // Alternar tenant (implementação simplificada)
+  const switchTenant = useCallback(async (tenantId: string) => {
+    if (!user) return;
+
+    try {
+      // Buscar dados da empresa (usando configuracao_empresa como base)
+      const { data, error } = await supabase
+        .from('configuracao_empresa')
+        .select('*')
+        .eq('id', tenantId)
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+
+      if (data) {
+        setCurrentTenant(data);
+        // Simular usuário tenant atual
+        setCurrentTenantUser({
+          id: user.id,
+          user_id: user.id,
+          role: 'admin',
+          status: 'ativo',
+          permissoes: {
+            all: ['create', 'read', 'update', 'delete']
+          },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao alternar tenant';
+      console.error('Erro ao alternar tenant:', errorMessage);
+      setError(errorMessage);
+    }
+  }, [user]);
+
+  // Carregar tenants do usuário (baseado em configuracao_empresa)
   const loadUserTenants = useCallback(async () => {
     if (!user) {
-      setUserTenants([]);
+      setTenants([]);
       setCurrentTenant(null);
       setCurrentTenantUser(null);
       setLoading(false);
@@ -92,113 +132,44 @@ export const useTenant = () => {
       setLoading(true);
       setError(null);
 
-      // Buscar todos os tenants do usuário
-      const { data: tenantUsers, error: tenantUsersError } = await supabase
-        .from('tenant_users')
-        .select(`
-          *,
-          tenant:tenants(*)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'ativo');
+      // Buscar configurações de empresa do usuário
+      const { data: empresas, error: empresasError } = await supabase
+        .from('configuracao_empresa')
+        .select('*')
+        .eq('user_id', user.id);
 
-      if (tenantUsersError) throw tenantUsersError;
+      if (empresasError) throw empresasError;
 
-      const tenants = tenantUsers?.map(tu => tu.tenant).filter(Boolean) || [];
-      setUserTenants(tenants);
+      setTenants(empresas || []);
 
-      // Se não há tenant atual definido, usar o primeiro
-      if (!currentTenant && tenants.length > 0) {
-        await switchTenant(tenants[0].id);
+      // Se não há tenant atual, selecionar o primeiro
+      if (empresas && empresas.length > 0 && !currentTenant) {
+        await switchTenant(empresas[0].id);
       }
-    } catch (err: any) {
-      console.error('Erro ao carregar tenants:', err);
-      setError(err.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao carregar tenants';
+      console.error('Erro ao carregar tenants:', errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
-  }, [user, currentTenant]);
+  }, [user, currentTenant, switchTenant]);
 
-  // Trocar de tenant
-  const switchTenant = useCallback(async (tenantId: string) => {
-    try {
-      setError(null);
-
-      // Chamar função do banco para trocar contexto
-      const { data, error } = await supabase.rpc('switch_tenant_context', {
-        p_tenant_id: tenantId
-      });
-
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-
-      // Buscar informações completas do tenant
-      const { data: tenantInfo, error: tenantError } = await supabase.rpc('get_current_tenant_info');
-      
-      if (tenantError) throw tenantError;
-      if (!tenantInfo.success) throw new Error(tenantInfo.error);
-
-      const tenant = tenantInfo.tenant;
-      setCurrentTenant({
-        id: tenant.id,
-        nome: tenant.nome,
-        slug: tenant.slug,
-        cnpj: tenant.cnpj,
-        telefone: tenant.telefone,
-        email: tenant.email,
-        endereco: tenant.endereco,
-        cidade: tenant.cidade,
-        estado: tenant.estado,
-        cep: tenant.cep,
-        logo_url: tenant.logo_url,
-        plano: tenant.plano,
-        status: tenant.status,
-        data_criacao: tenant.data_criacao,
-        data_vencimento: tenant.data_vencimento,
-        configuracoes: tenant.configuracoes,
-        limites: tenant.limites,
-        created_at: tenant.created_at,
-        updated_at: tenant.updated_at
-      });
-
-      setCurrentTenantUser({
-        id: tenant.id, // Será ajustado quando tivermos a estrutura correta
-        tenant_id: tenant.id,
-        user_id: user?.id || '',
-        role: tenant.role,
-        status: 'ativo',
-        permissoes: tenant.permissoes,
-        created_at: tenant.created_at,
-        updated_at: tenant.updated_at
-      });
-
-      // Salvar no localStorage para persistir entre sessões
-      localStorage.setItem('currentTenantId', tenantId);
-
-    } catch (err: any) {
-      console.error('Erro ao trocar tenant:', err);
-      setError(err.message);
-    }
-  }, [user]);
-
-  // Verificar permissão
-  const hasPermission = useCallback((resource: string, action: string): boolean => {
-    if (!currentTenantUser?.permissoes) return false;
+  // Verificar permissão (implementação simplificada)
+  const hasPermission = useCallback((resource: string, action: string) => {
+    if (!currentTenantUser) return false;
     
-    const resourcePermissions = currentTenantUser.permissoes[resource];
-    if (!resourcePermissions) return false;
-    
-    return resourcePermissions.includes(action);
+    const permissions = currentTenantUser.permissoes[resource] || currentTenantUser.permissoes['all'];
+    return permissions?.includes(action) || permissions?.includes('all');
   }, [currentTenantUser]);
 
-  // Verificar se tem feature
-  const hasFeature = useCallback((feature: string): boolean => {
-    if (!currentTenant?.limites?.features) return false;
-    return currentTenant.limites.features.includes(feature);
-  }, [currentTenant]);
+  // Verificar se tem feature (sempre true para implementação simplificada)
+  const hasFeature = useCallback((feature: string) => {
+    return true; // Todas as features disponíveis na versão simplificada
+  }, []);
 
   // Verificar se é admin
-  const isAdmin = useCallback((): boolean => {
+  const isAdmin = useCallback(() => {
     return currentTenantUser?.role === 'admin';
   }, [currentTenantUser]);
 
@@ -207,126 +178,77 @@ export const useTenant = () => {
     return currentTenantUser?.role === 'admin' || currentTenantUser?.role === 'gerente';
   }, [currentTenantUser]);
 
-  // Criar convite
+  // Criar convite (placeholder - não implementado)
   const createInvite = useCallback(async (email: string, role: 'admin' | 'gerente' | 'funcionario') => {
-    if (!currentTenant) throw new Error('Nenhum tenant selecionado');
-    
-    try {
-      const { data, error } = await supabase.rpc('create_tenant_invite', {
-        p_tenant_id: currentTenant.id,
-        p_email: email,
-        p_role: role
-      });
+    throw new Error('Funcionalidade de convites não implementada na versão atual');
+  }, []);
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-
-      return data;
-    } catch (err: any) {
-      console.error('Erro ao criar convite:', err);
-      throw err;
-    }
-  }, [currentTenant]);
-
-  // Aceitar convite
+  // Aceitar convite (placeholder - não implementado)
   const acceptInvite = useCallback(async (token: string) => {
-    try {
-      const { data, error } = await supabase.rpc('accept_tenant_invite', {
-        invite_token: token
-      });
+    throw new Error('Funcionalidade de convites não implementada na versão atual');
+  }, []);
 
-      if (error) throw error;
-      if (!data.success) throw new Error(data.error);
-
-      // Recarregar tenants após aceitar convite
-      await loadUserTenants();
-
-      return data;
-    } catch (err: any) {
-      console.error('Erro ao aceitar convite:', err);
-      throw err;
-    }
-  }, [loadUserTenants]);
-
-  // Buscar estatísticas do tenant
+  // Obter estatísticas do tenant (baseado em dados reais)
   const getTenantStatistics = useCallback(async (): Promise<TenantStatistics | null> => {
-    if (!currentTenant) return null;
+    if (!user) return null;
 
     try {
-      const { data, error } = await supabase
-        .from('tenant_statistics')
-        .select('*')
-        .eq('tenant_id', currentTenant.id)
-        .single();
+      // Buscar estatísticas reais das tabelas existentes
+      const [clientesResult, veiculosResult, pecasResult] = await Promise.all([
+        supabase.from('clientes').select('id', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('veiculos').select('id', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('pecas').select('id', { count: 'exact' }).eq('user_id', user.id)
+      ]);
 
-      if (error) throw error;
-      return data;
-    } catch (err: any) {
-      console.error('Erro ao buscar estatísticas:', err);
+      return {
+        total_clientes: clientesResult.count || 0,
+        total_veiculos: veiculosResult.count || 0,
+        total_pecas: pecasResult.count || 0,
+        total_ordens: 0 // Placeholder
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao obter estatísticas';
+      console.error('Erro ao obter estatísticas:', errorMessage);
       return null;
     }
-  }, [currentTenant]);
+  }, [user]);
 
-  // Buscar convites pendentes
+  // Obter convites pendentes (placeholder)
   const getPendingInvites = useCallback(async (): Promise<TenantInvite[]> => {
-    if (!currentTenant) return [];
+    return []; // Não implementado
+  }, []);
 
-    try {
-      const { data, error } = await supabase
-        .from('tenant_invites')
-        .select('*')
-        .eq('tenant_id', currentTenant.id)
-        .eq('status', 'pendente')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (err: any) {
-      console.error('Erro ao buscar convites:', err);
-      return [];
-    }
-  }, [currentTenant]);
-
-  // Buscar usuários do tenant
+  // Obter usuários do tenant (placeholder)
   const getTenantUsers = useCallback(async (): Promise<TenantUser[]> => {
-    if (!currentTenant) return [];
+    if (!currentTenantUser) return [];
+    return [currentTenantUser]; // Retorna apenas o usuário atual
+  }, [currentTenantUser]);
 
-    try {
-      const { data, error } = await supabase
-        .from('current_tenant_users')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return data || [];
-    } catch (err: any) {
-      console.error('Erro ao buscar usuários do tenant:', err);
-      return [];
-    }
-  }, [currentTenant]);
-
-  // Atualizar tenant
+  // Atualizar tenant (baseado em configuracao_empresa)
   const updateTenant = useCallback(async (updates: Partial<Tenant>) => {
-    if (!currentTenant) throw new Error('Nenhum tenant selecionado');
-    if (!isAdmin()) throw new Error('Apenas administradores podem atualizar o tenant');
+    if (!currentTenant || !user) throw new Error('Tenant ou usuário não encontrado');
 
     try {
       const { data, error } = await supabase
-        .from('tenants')
+        .from('configuracao_empresa')
         .update(updates)
         .eq('id', currentTenant.id)
+        .eq('user_id', user.id)
         .select()
         .single();
 
       if (error) throw error;
 
-      setCurrentTenant(prev => prev ? { ...prev, ...data } : null);
-      return data;
-    } catch (err: any) {
-      console.error('Erro ao atualizar tenant:', err);
-      throw err;
+      if (data) {
+        setCurrentTenant(data);
+        return { success: true, data };
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao atualizar tenant';
+      console.error('Erro ao atualizar tenant:', errorMessage);
+      throw new Error(errorMessage);
     }
-  }, [currentTenant, isAdmin]);
+  }, [currentTenant, user]);
 
   // Carregar tenant do localStorage na inicialização
   useEffect(() => {
@@ -346,30 +268,21 @@ export const useTenant = () => {
     loadUserTenants();
   }, [loadUserTenants]);
 
-  const createTenant = async (tenantData: { name: string; description?: string }) => {
+  // Criar novo tenant (baseado em configuracao_empresa)
+  const createTenant = async (tenantData: { nome_empresa: string; cnpj?: string }) => {
     if (!user) throw new Error('Usuário não autenticado');
 
     const { data, error } = await supabase
-      .from('tenants')
+      .from('configuracao_empresa')
       .insert({
-        name: tenantData.name,
-        description: tenantData.description,
+        nome_empresa: tenantData.nome_empresa,
+        cnpj: tenantData.cnpj,
         user_id: user.id
       })
       .select()
       .single();
 
     if (error) throw error;
-
-    // Adicionar o usuário como owner do tenant
-    await supabase
-      .from('tenant_users')
-      .insert({
-        tenant_id: data.id,
-        user_id: user.id,
-        role: 'owner',
-        permissions: ['all']
-      });
 
     // Recarregar tenants
     await loadUserTenants();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ interface Veiculo {
   chassi?: string;
   observacoes?: string;
   cliente_id: string;
+  foto?: string;
 }
 
 interface VeiculoFormProps {
@@ -66,9 +67,9 @@ export const VeiculoForm: React.FC<VeiculoFormProps> = ({
     if (isOpen) {
       fetchClientes();
     }
-  }, [isOpen]);
+  }, [isOpen, fetchClientes]);
 
-  const fetchClientes = async () => {
+  const fetchClientes = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('clientes')
@@ -77,14 +78,15 @@ export const VeiculoForm: React.FC<VeiculoFormProps> = ({
 
       if (error) throw error;
       setClientes(data || []);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar clientes';
       toast({
         title: "Erro ao carregar clientes",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     }
-  };
+  }, [toast]);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -116,7 +118,7 @@ export const VeiculoForm: React.FC<VeiculoFormProps> = ({
         .getPublicUrl(fileName);
 
       return data.publicUrl;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao fazer upload da foto:', error);
       throw error;
     }
@@ -208,10 +210,11 @@ export const VeiculoForm: React.FC<VeiculoFormProps> = ({
       setPhotoFile(null);
       setPhotoPreview(null);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao salvar veículo';
       toast({
         title: "Erro ao salvar veículo",
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

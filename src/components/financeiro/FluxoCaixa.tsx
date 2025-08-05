@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Tables } from "@/integrations/supabase/types";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format, startOfMonth, endOfMonth, subMonths, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
+
 import { DateRange } from "react-day-picker";
 
 type FluxoCaixa = Tables<"fluxo_caixa">;
@@ -84,11 +84,7 @@ export function FluxoCaixa() {
     ],
   };
 
-  useEffect(() => {
-    fetchMovimentos();
-  }, [dateRange]);
-
-  const fetchMovimentos = async () => {
+  const fetchMovimentos = useCallback(async () => {
     try {
       let query = supabase
         .from("fluxo_caixa")
@@ -112,7 +108,11 @@ export function FluxoCaixa() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    fetchMovimentos();
+  }, [fetchMovimentos]);
 
   const onSubmit = async (data: FluxoCaixaFormData) => {
     try {
@@ -421,10 +421,13 @@ export function FluxoCaixa() {
             <Button variant="outline" onClick={handleNextMonth}>
               Próximo Mês
             </Button>
-            <DatePickerWithRange
-              date={dateRange}
-              onDateChange={setDateRange}
-            />
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground">
+                {dateRange?.from && dateRange?.to
+                  ? `${format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })} - ${format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}`
+                  : "Selecione um período"}
+              </span>
+            </div>
           </div>
         </CardHeader>
       </Card>

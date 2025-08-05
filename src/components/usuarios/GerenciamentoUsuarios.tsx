@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -83,7 +83,7 @@ export function GerenciamentoUsuarios() {
     loadUserRole();
     loadUsuarios();
     loadConvites();
-  }, []);
+  }, [loadUsuarios]);
 
   const loadUserRole = async () => {
     try {
@@ -97,7 +97,7 @@ export function GerenciamentoUsuarios() {
     }
   };
 
-  const loadUsuarios = async () => {
+  const loadUsuarios = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -125,7 +125,7 @@ export function GerenciamentoUsuarios() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
   const loadConvites = async () => {
     try {
@@ -157,10 +157,11 @@ export function GerenciamentoUsuarios() {
       
       form.reset();
       setIsDialogOpen(false);
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro ao enviar convite';
       toast({
         title: 'Erro',
-        description: error.message || 'Erro ao enviar convite',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
@@ -269,7 +270,7 @@ export function GerenciamentoUsuarios() {
                 <Label htmlFor="role">Cargo</Label>
                 <Select
                   value={form.watch('role')}
-                  onValueChange={(value) => form.setValue('role', value as any)}
+                  onValueChange={(value) => form.setValue('role', value as 'admin' | 'gerente' | 'funcionario')}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um cargo" />
