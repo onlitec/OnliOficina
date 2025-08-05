@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Mail, Save, TestTube } from 'lucide-react';
-import { Tables } from '@/integrations/supabase/types';
+import { Tables, TablesInsert } from '@/integrations/supabase/types';
 
 type ConfiguracaoEmail = Tables<'configuracao_email'>;
 
@@ -123,9 +123,21 @@ export function ConfiguracaoEmail() {
 
         if (error) throw error;
       } else {
+        const insertData: TablesInsert<'configuracao_email'> = {
+          servidor_smtp: data.servidor_smtp,
+          porta: data.porta,
+          usuario: data.usuario,
+          senha: data.senha,
+          email_remetente: data.email_remetente,
+          nome_remetente: data.nome_remetente,
+          usar_ssl: data.usar_ssl,
+          ativo: data.ativo,
+          user_id: user.id,
+        };
+
         const { error } = await supabase
           .from('configuracao_email')
-          .insert([configData]);
+          .insert(insertData);
 
         if (error) throw error;
       }
@@ -141,13 +153,26 @@ export function ConfiguracaoEmail() {
   };
 
   const testEmailConnection = async () => {
+    if (!user) {
+      toast.error('Usuário não autenticado');
+      return;
+    }
+
     setTestingEmail(true);
     try {
-      // Aqui você implementaria a lógica de teste de conexão SMTP
-      // Por enquanto, apenas simularemos um teste
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      toast.success('Conexão de email testada com sucesso!');
-    } catch (error) {
+      const { data, error } = await supabase.functions.invoke('send-email', {
+        body: { action: 'test' }
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success(data.message);
+      } else {
+        toast.error(data.error || 'Erro ao testar conexão');
+      }
+    } catch (error: any) {
+      console.error('Erro ao testar email:', error);
       toast.error('Erro ao testar conexão de email');
     } finally {
       setTestingEmail(false);
