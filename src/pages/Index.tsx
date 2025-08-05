@@ -66,7 +66,7 @@ const Index = () => {
         title: "Login realizado com sucesso!",
         description: "Bem-vindo ao AutoGest"
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro capturado no handleLogin:', error);
       throw error;
     }

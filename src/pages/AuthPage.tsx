@@ -50,11 +50,12 @@ export const AuthPage: React.FC<AuthPageProps> = ({
         description: "Bem-vindo ao OnliOficina"
       });
       onAuthSuccess();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro capturado no login:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Email ou senha incorretos.';
       toast({
         title: "Erro no login",
-        description: error.message || "Email ou senha incorretos.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
