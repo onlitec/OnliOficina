@@ -132,4 +132,8 @@ Servidor: 172.20.120.44
 - Site acessível via IP: http://172.20.120.44
 - Site acessível via domínio: http://toledo-oficina.local
 - Configurações de segurança aplicadas
+<<<<<<< HEAD
 - Cache otimizado para performance
+=======
+- Cache otimizado para performance
+>>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)

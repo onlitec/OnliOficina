@@ -11,7 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { Mail, Save, TestTube } from 'lucide-react';
+<<<<<<< HEAD
 import { Tables, TablesInsert } from '@/integrations/supabase/types';
+=======
+import { Tables } from '@/integrations/supabase/types';
+>>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
 
 type ConfiguracaoEmail = Tables<'configuracao_email'>;
 
@@ -123,6 +127,7 @@ export function ConfiguracaoEmail() {
 
         if (error) throw error;
       } else {
+<<<<<<< HEAD
         const insertData: TablesInsert<'configuracao_email'> = {
           servidor_smtp: data.servidor_smtp,
           porta: data.porta,
@@ -138,6 +143,11 @@ export function ConfiguracaoEmail() {
         const { error } = await supabase
           .from('configuracao_email')
           .insert(insertData);
+=======
+        const { error } = await supabase
+          .from('configuracao_email')
+          .insert([configData]);
+>>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
 
         if (error) throw error;
       }
@@ -153,6 +163,7 @@ export function ConfiguracaoEmail() {
   };
 
   const testEmailConnection = async () => {
+<<<<<<< HEAD
     if (!user) {
       toast.error('Usuário não autenticado');
       return;
@@ -173,6 +184,15 @@ export function ConfiguracaoEmail() {
       }
     } catch (error: any) {
       console.error('Erro ao testar email:', error);
+=======
+    setTestingEmail(true);
+    try {
+      // Aqui você implementaria a lógica de teste de conexão SMTP
+      // Por enquanto, apenas simularemos um teste
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success('Conexão de email testada com sucesso!');
+    } catch (error) {
+>>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
       toast.error('Erro ao testar conexão de email');
     } finally {
       setTestingEmail(false);
@@ -303,6 +323,10 @@ export function ConfiguracaoEmail() {
             </div>
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
             <div className="flex justify-between">
               <Button
                 type="button"

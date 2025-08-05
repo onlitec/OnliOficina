@@ -6,9 +6,10 @@ import { ClientesList } from '@/components/clientes/ClientesList';
 import { VeiculosList } from '@/components/veiculos/VeiculosList';
 import { OrdensList } from '@/components/ordens/OrdensList';
 import { ServicosList } from '@/components/servicos/ServicosList';
+import { GerenciamentoUsuarios } from '@/components/usuarios/GerenciamentoUsuarios';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Download, Smartphone, Globe } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -96,6 +97,8 @@ const Index = () => {
         return <OrdensList />;
       case 'servicos':
         return <ServicosList />;
+      case 'usuarios':
+        return <GerenciamentoUsuarios />;
       case 'configuracoes':
         return <ConfiguracoesPage />;
       default:
@@ -113,6 +116,7 @@ const Index = () => {
     </div>;
 };
 const ConfiguracoesPage: React.FC = () => {
+<<<<<<< HEAD
   const {
     toast
   } = useToast();
@@ -123,6 +127,14 @@ const ConfiguracoesPage: React.FC = () => {
     });
   };
   return <div className="space-y-6">
+=======
+  const { toast } = useToast();
+
+
+
+  return (
+    <div className="space-y-6">
+>>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
       <div>
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
           <Settings className="w-8 h-8 text-primary" />
@@ -133,50 +145,8 @@ const ConfiguracoesPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* App Mobile Card */}
-        <Card className="bg-gradient-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Smartphone className="w-6 h-6 text-primary" />
-              Aplicativo Mobile
-            </CardTitle>
-            <CardDescription>
-              Baixe o app para gerenciar sua oficina em qualquer lugar
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-4 p-4 bg-muted/50 rounded-lg">
-              <div className="w-12 h-12 bg-gradient-primary rounded-xl flex items-center justify-center">
-                <Smartphone className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-foreground">AutoGest Mobile</h3>
-                <p className="text-sm text-muted-foreground">
-                  Acesso completo às funcionalidades da oficina
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-success"></div>
-                Gestão de clientes e veículos
-              </div>
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-success"></div>
-                Sincronização em tempo real
-              </div>
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-success"></div>
-                Funciona offline
-              </div>
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-success"></div>
-                Interface otimizada para mobile
-              </div>
-            </div>
 
+<<<<<<< HEAD
             <Button onClick={handleDownloadApp} className="w-full bg-gradient-primary hover:bg-primary-hover text-primary-foreground" size="lg">
               <Download className="w-4 h-4 mr-2" />
               Baixar Aplicativo
@@ -232,6 +202,8 @@ const ConfiguracoesPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+=======
+>>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
 
       {/* Configurações do Sistema */}
       <Card>
