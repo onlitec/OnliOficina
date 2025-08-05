@@ -8,7 +8,9 @@ import { OrdensList } from '@/components/ordens/OrdensList';
 import { ServicosList } from '@/components/servicos/ServicosList';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Settings, Download, Smartphone, Globe } from 'lucide-react';
+import { Settings, Download, Smartphone, Globe, UserPlus, Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
@@ -119,12 +121,79 @@ const Index = () => {
 
 const ConfiguracoesPage: React.FC = () => {
   const { toast } = useToast();
+  
+  // Estados para cadastro de usuário
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleDownloadApp = () => {
     toast({
       title: "Preparando download...",
       description: "O aplicativo mobile estará disponível em breve para Android e iOS",
     });
+  };
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email || !password || !confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha todos os campos.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (password.length < 6) {
+      toast({
+        title: "Erro",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Usuário cadastrado com sucesso!",
+        description: "O novo usuário já pode fazer login no sistema."
+      });
+      
+      // Limpar formulário
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast({
+        title: "Erro no cadastro",
+        description: error.message || "Erro ao criar usuário.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -252,6 +321,102 @@ const ConfiguracoesPage: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Cadastro de Novos Usuários */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="w-6 h-6 text-primary" />
+            Cadastrar Novo Usuário
+          </CardTitle>
+          <CardDescription>
+            Adicione novos usuários ao sistema
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSignUp} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="signup-email" className="text-foreground flex items-center gap-2">
+                  <Mail className="w-4 h-4" />
+                  Email
+                </Label>
+                <Input 
+                  id="signup-email" 
+                  type="email" 
+                  placeholder="Digite o email do usuário" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)} 
+                  className="h-10" 
+                  disabled={isLoading} 
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="signup-password" className="text-foreground flex items-center gap-2">
+                  <Lock className="w-4 h-4" />
+                  Senha
+                </Label>
+                <div className="relative">
+                  <Input 
+                    id="signup-password" 
+                    type={showPassword ? "text" : "password"} 
+                    placeholder="Digite a senha" 
+                    value={password} 
+                    onChange={(e) => setPassword(e.target.value)} 
+                    className="h-10 pr-10" 
+                    disabled={isLoading} 
+                  />
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    className="absolute right-0 top-0 h-10 px-3 hover:bg-transparent" 
+                    onClick={() => setShowPassword(!showPassword)} 
+                    disabled={isLoading}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirm-password" className="text-foreground flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Confirmar Senha
+              </Label>
+              <Input 
+                id="confirm-password" 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Confirme a senha" 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                className="h-10" 
+                disabled={isLoading} 
+              />
+            </div>
+            
+            <Button 
+              type="submit" 
+              className="bg-primary hover:bg-primary-hover text-primary-foreground" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cadastrando...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Cadastrar Usuário
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Configurações do Sistema */}
       <Card>
