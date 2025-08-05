@@ -218,7 +218,7 @@ export function PecasList() {
     setIsDialogOpen(true);
   };
 
-  const getEstoqueStatus = (peca: Peca) => {
+  const getEstoqueStatus = (peca: Peca): { status: string; color: "destructive" | "secondary" | "default" } => {
     if (peca.quantidade_atual <= peca.quantidade_minima) {
       return { status: "baixo", color: "destructive" };
     }
@@ -522,7 +522,7 @@ export function PecasList() {
                       <div className="flex items-center space-x-2">
                         <span>{peca.quantidade_atual}</span>
                         {estoqueStatus.status === "baixo" && (
-                          <Badge variant={estoqueStatus.color as any} className="flex items-center space-x-1">
+                          <Badge variant={estoqueStatus.color} className="flex items-center space-x-1">
                             <AlertTriangle className="h-3 w-3" />
                             <span>Baixo</span>
                           </Badge>

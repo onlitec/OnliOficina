@@ -282,7 +282,7 @@ export function ManutencaoFerramentas() {
     setIsDialogOpen(true);
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "outline" | "secondary" | "default" | "destructive" => {
     switch (status) {
       case "agendada":
         return "outline";
@@ -312,7 +312,7 @@ export function ManutencaoFerramentas() {
     }
   };
 
-  const getTipoBadgeVariant = (tipo: string) => {
+  const getTipoBadgeVariant = (tipo: string): "default" | "secondary" | "outline" => {
     switch (tipo) {
       case "preventiva":
         return "default";
@@ -598,7 +598,7 @@ export function ManutencaoFerramentas() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getTipoBadgeVariant(manutencao.tipo) as any}>
+                    <Badge variant={getTipoBadgeVariant(manutencao.tipo)}>
                       {getTipoLabel(manutencao.tipo)}
                     </Badge>
                   </TableCell>
@@ -629,7 +629,7 @@ export function ManutencaoFerramentas() {
                     {manutencao.custo ? `R$ ${manutencao.custo.toFixed(2)}` : "-"}
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(manutencao.status) as any}>
+                    <Badge variant={getStatusBadgeVariant(manutencao.status)}>
                       {getStatusLabel(manutencao.status)}
                     </Badge>
                   </TableCell>

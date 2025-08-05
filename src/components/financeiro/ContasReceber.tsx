@@ -276,7 +276,7 @@ export function ContasReceber() {
     setIsDialogOpen(true);
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "outline" | "default" | "destructive" | "secondary" => {
     switch (status) {
       case "pendente":
         return "outline";
@@ -622,7 +622,7 @@ export function ContasReceber() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(conta.status) as any}>
+                    <Badge variant={getStatusBadgeVariant(conta.status)}>
                       {getStatusLabel(conta.status)}
                     </Badge>
                   </TableCell>

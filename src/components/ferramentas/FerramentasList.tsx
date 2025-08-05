@@ -197,7 +197,7 @@ export function FerramentasList() {
     setIsDialogOpen(true);
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case "disponivel":
         return "default";
@@ -520,7 +520,7 @@ export function FerramentasList() {
                     }
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(ferramenta.status) as any}>
+                    <Badge variant={getStatusBadgeVariant(ferramenta.status)}>
                       {getStatusLabel(ferramenta.status)}
                     </Badge>
                   </TableCell>

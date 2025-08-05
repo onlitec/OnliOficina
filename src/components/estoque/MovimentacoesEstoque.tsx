@@ -187,7 +187,7 @@ export function MovimentacoesEstoque() {
     }
   };
 
-  const getTipoBadgeVariant = (tipo: string) => {
+  const getTipoBadgeVariant = (tipo: string): "default" | "destructive" | "secondary" | "outline" => {
     switch (tipo) {
       case "entrada":
         return "default";
@@ -396,7 +396,7 @@ export function MovimentacoesEstoque() {
                   </TableCell>
                   <TableCell>
                     <Badge 
-                      variant={getTipoBadgeVariant(movimentacao.tipo_movimentacao) as any}
+                      variant={getTipoBadgeVariant(movimentacao.tipo_movimentacao)}
                       className="flex items-center space-x-1 w-fit"
                     >
                       {getTipoIcon(movimentacao.tipo_movimentacao)}

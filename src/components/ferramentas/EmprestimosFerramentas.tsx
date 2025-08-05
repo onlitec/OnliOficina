@@ -258,7 +258,7 @@ export function EmprestimosFerramentas() {
     setIsDialogOpen(true);
   };
 
-  const getStatusBadgeVariant = (status: string) => {
+  const getStatusBadgeVariant = (status: string): "secondary" | "default" | "outline" => {
     switch (status) {
       case "emprestado":
         return "secondary";
@@ -528,7 +528,7 @@ export function EmprestimosFerramentas() {
                     }
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusBadgeVariant(emprestimo.status) as any}>
+                    <Badge variant={getStatusBadgeVariant(emprestimo.status)}>
                       {getStatusLabel(emprestimo.status)}
                     </Badge>
                   </TableCell>
