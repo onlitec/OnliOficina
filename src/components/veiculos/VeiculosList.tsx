@@ -47,10 +47,6 @@ export const VeiculosList: React.FC = () => {
   const [editingVeiculo, setEditingVeiculo] = useState<Veiculo | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchVeiculos();
-  }, [fetchVeiculos]);
-
   const fetchVeiculos = useCallback(async () => {
     try {
       const { data, error } = await supabase
@@ -77,6 +73,10 @@ export const VeiculosList: React.FC = () => {
       setIsLoading(false);
     }
   }, [toast]);
+
+  useEffect(() => {
+    fetchVeiculos();
+  }, [fetchVeiculos]);
 
   const handleEdit = (veiculo: Veiculo) => {
     setEditingVeiculo(veiculo);
