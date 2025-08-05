@@ -9,7 +9,9 @@ import {
   Wrench,
   Download,
   LayoutDashboard,
-  FileText
+  FileText,
+  Package,
+  Hammer
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
