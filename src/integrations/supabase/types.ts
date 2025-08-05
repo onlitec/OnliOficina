@@ -65,6 +65,51 @@ export type Database = {
         }
         Relationships: []
       }
+      configuracao_email: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          email_remetente: string
+          id: string
+          nome_remetente: string
+          porta: number
+          senha: string
+          servidor_smtp: string
+          updated_at: string
+          usar_ssl: boolean
+          user_id: string
+          usuario: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          email_remetente: string
+          id?: string
+          nome_remetente: string
+          porta?: number
+          senha: string
+          servidor_smtp: string
+          updated_at?: string
+          usar_ssl?: boolean
+          user_id: string
+          usuario: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          email_remetente?: string
+          id?: string
+          nome_remetente?: string
+          porta?: number
+          senha?: string
+          servidor_smtp?: string
+          updated_at?: string
+          usar_ssl?: boolean
+          user_id?: string
+          usuario?: string
+        }
+        Relationships: []
+      }
       itens_servico: {
         Row: {
           created_at: string
