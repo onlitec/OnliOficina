@@ -116,25 +116,16 @@ const Index = () => {
     </div>;
 };
 const ConfiguracoesPage: React.FC = () => {
-<<<<<<< HEAD
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  
   const handleDownloadApp = () => {
     toast({
       title: "Preparando download...",
       description: "O aplicativo mobile estará disponível em breve para Android e iOS"
     });
   };
-  return <div className="space-y-6">
-=======
-  const { toast } = useToast();
-
-
-
   return (
     <div className="space-y-6">
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
       <div>
         <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
           <Settings className="w-8 h-8 text-primary" />
@@ -146,64 +137,7 @@ const ConfiguracoesPage: React.FC = () => {
       </div>
 
 
-<<<<<<< HEAD
-            <Button onClick={handleDownloadApp} className="w-full bg-gradient-primary hover:bg-primary-hover text-primary-foreground" size="lg">
-              <Download className="w-4 h-4 mr-2" />
-              Baixar Aplicativo
-            </Button>
-            
-            <p className="text-xs text-muted-foreground text-center">
-              Disponível para Android e iOS
-            </p>
-          </CardContent>
-        </Card>
 
-        {/* Sistema Web Card */}
-        <Card className="bg-gradient-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="w-6 h-6 text-accent" />
-              Plataforma Web
-            </CardTitle>
-            <CardDescription>
-              Informações sobre a versão web do sistema
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            
-            
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-primary"></div>
-                Interface responsiva
-              </div>
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-primary"></div>
-                Atualizações automáticas
-              </div>
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-primary"></div>
-                Backup em nuvem
-              </div>
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <div className="w-2 h-2 rounded-full bg-primary"></div>
-                Acesso multiplataforma
-              </div>
-            </div>
-
-            <div className="bg-success/10 border border-success/20 rounded-lg p-3">
-              <p className="text-sm text-success font-medium">
-                ✓ Você está usando a versão web atual
-              </p>
-              <p className="text-xs text-success/80 mt-1">
-                Sistema atualizado e funcionando perfeitamente
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-=======
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
 
       {/* Configurações do Sistema */}
       <Card>
@@ -247,6 +181,8 @@ const ConfiguracoesPage: React.FC = () => {
           </div>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  );
 };
+
 export default Index;

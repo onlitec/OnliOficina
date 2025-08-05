@@ -10,12 +10,8 @@ import {
   Download,
   LayoutDashboard,
   FileText,
-<<<<<<< HEAD
   Package,
   Hammer
-=======
-  UserPlus
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +36,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'veiculos', label: 'Veículos', icon: Car },
     { id: 'ordens', label: 'Ordens de Serviço', icon: Wrench },
     { id: 'servicos', label: 'Tipos de Serviços', icon: FileText },
-    { id: 'usuarios', label: 'Usuários', icon: UserPlus },
+    { id: 'usuarios', label: 'Usuários', icon: Users },
     { id: 'configuracoes', label: 'Configurações', icon: Settings },
   ];
 

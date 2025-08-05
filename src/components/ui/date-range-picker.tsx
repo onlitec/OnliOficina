@@ -2,10 +2,6 @@ import React from 'react';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-<<<<<<< HEAD
-import { DateRange } from 'react-day-picker';
-=======
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
@@ -15,11 +11,6 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 
-<<<<<<< HEAD
-interface DateRangePickerProps {
-  date?: DateRange;
-  onDateChange?: (date: DateRange | undefined) => void;
-=======
 export interface DateRange {
   from: Date | undefined;
   to: Date | undefined;
@@ -28,19 +19,11 @@ export interface DateRange {
 interface DateRangePickerProps {
   value?: DateRange;
   onChange?: (range: DateRange | undefined) => void;
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
   placeholder?: string;
   className?: string;
 }
 
 export function DateRangePicker({
-<<<<<<< HEAD
-  date,
-  onDateChange,
-  placeholder = "Selecione um período",
-  className,
-}: DateRangePickerProps) {
-=======
   value,
   onChange,
   placeholder = "Selecione um período",
@@ -56,8 +39,6 @@ export function DateRangePicker({
     setDate(range);
     onChange?.(range);
   };
-
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover>
@@ -66,11 +47,7 @@ export function DateRangePicker({
             id="date"
             variant={"outline"}
             className={cn(
-<<<<<<< HEAD
-              "w-full justify-start text-left font-normal",
-=======
               "w-[300px] justify-start text-left font-normal",
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
               !date && "text-muted-foreground"
             )}
           >
@@ -95,11 +72,7 @@ export function DateRangePicker({
             mode="range"
             defaultMonth={date?.from}
             selected={date}
-<<<<<<< HEAD
-            onSelect={onDateChange}
-=======
             onSelect={handleSelect}
->>>>>>> 0383991 (Remove opção de cadastro da página de login - agora o cadastro será feito via API ou página de configurações)
             numberOfMonths={2}
             locale={ptBR}
           />
